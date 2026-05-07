@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tekii · Network Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14; --surface: #111722; --surface2: #1a2232; --border: #1e2d42;
+    --accent: #00c6ff; --accent2: #39ff6a; --text: #c8d8ec; --text-strong: #ffffff;
+    --muted: #4a6080; --card-name: #e8f0fb; --grid-line: rgba(0,198,255,0.03);
+    --logo-color: #ffffff;
+    --mono: 'Share Tech Mono', monospace; --sans: 'Barlow', sans-serif; --display: 'Barlow Condensed', sans-serif;
+  }
+  body.light {
+    --bg: #f0f4f8; --surface: #ffffff; --surface2: #e8eef5; --border: #c8d8ec;
+    --accent: #0077aa; --accent2: #1a7a3a; --text: #2a3a4e; --text-strong: #0a1624;
+    --muted: #7a92aa; --card-name: #0e1e30; --grid-line: rgba(0,119,170,0.05);
+    --logo-color: #0a1624;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+  .wrapper { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* Header */
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .logo { font-family: var(--display); font-size: clamp(2rem,5vw,3.2rem); font-weight: 900; letter-spacing: 0.04em; color: var(--logo-color); line-height: 1; }
+  .logo span { color: var(--accent); }
+  .tagline { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 0.15rem; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+  .header-top-row { display: flex; align-items: center; gap: 0.8rem; }
+  .icon-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 0.3rem 0.7rem; cursor: pointer; font-size: 1rem; line-height: 1; transition: background 0.2s, border-color 0.2s, transform 0.15s; display: flex; align-items: center; gap: 0.35rem; color: var(--text); font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.08em; }
+  .icon-btn:hover { border-color: var(--accent); transform: scale(1.05); }
+  .clock { font-family: var(--mono); font-size: 1.6rem; color: var(--accent); letter-spacing: 0.08em; }
+  .date-str { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); letter-spacing: 0.1em; }
+
+  /* Status bar */
+  .status-bar { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.2rem; font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .status-dot.ok { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+  .status-dot.err { background: #ff4455; box-shadow: 0 0 6px #ff4455; }
+  .status-dot.warn { background: #ffd600; }
+
+  /* Settings modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.8rem; width: 90%; max-width: 480px; }
+  .modal h2 { font-family: var(--display); font-weight: 900; font-size: 1.4rem; color: var(--text-strong); letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+  .modal p { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-bottom: 1.4rem; line-height: 1.6; }
+  .modal-field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1rem; }
+  .modal-field label { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .modal-field input { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 0.82rem; padding: 0.6rem 0.8rem; outline: none; transition: border-color 0.2s; width: 100%; }
+  .modal-field input:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 0.8rem; margin-top: 1.4rem; flex-wrap: wrap; }
+  .btn-primary { background: var(--accent); color: #000; border: none; border-radius: 4px; font-family: var(--display); font-weight: 700; font-size: 0.95rem; padding: 0.55rem 1.4rem; cursor: pointer; transition: opacity 0.2s; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-secondary { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-family: var(--mono); font-size: 0.78rem; padding: 0.55rem 1rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+  .btn-danger { background: none; border: 1px solid #ff4455; border-radius: 4px; color: #ff4455; font-family: var(--mono); font-size: 0.78rem; padding: 0.55rem 1rem; cursor: pointer; transition: background 0.2s; margin-left: auto; }
+  .btn-danger:hover { background: rgba(255,68,85,0.1); }
+
+  /* Search */
+  .search-bar { display: flex; align-items: center; gap: 0.8rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 1rem; margin-bottom: 1.5rem; transition: border-color 0.2s; }
+  .search-bar:focus-within { border-color: var(--accent); }
+  .search-bar svg { flex-shrink: 0; color: var(--muted); }
+  .search-bar input { background: none; border: none; color: var(--text); font-family: var(--mono); font-size: 0.85rem; outline: none; width: 100%; }
+  .search-bar input::placeholder { color: var(--muted); }
+
+  /* Add panel */
+  .add-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 2.5rem; overflow: hidden; }
+  .add-panel-toggle { width: 100%; background: none; border: none; color: var(--text); font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.1em; padding: 0.85rem 1.2rem; cursor: pointer; display: flex; align-items: center; gap: 0.7rem; transition: background 0.2s; }
+  .add-panel-toggle:hover { background: var(--surface2); }
+  .add-panel-toggle .plus { font-size: 1.1rem; color: var(--accent2); transition: transform 0.2s; }
+  .add-panel-toggle.open .plus { transform: rotate(45deg); }
+  .add-form { display: none; padding: 1.2rem; border-top: 1px solid var(--border); gap: 0.8rem; flex-wrap: wrap; align-items: flex-end; }
+  .add-form.visible { display: flex; }
+  .field { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; min-width: 140px; }
+  .field label { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .field input, .field select { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 0.82rem; padding: 0.55rem 0.8rem; outline: none; transition: border-color 0.2s; }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field select option { background: var(--surface); color: var(--text); }
+  .btn-add { background: var(--accent); color: #000; border: none; border-radius: 4px; font-family: var(--display); font-weight: 700; font-size: 0.95rem; padding: 0.55rem 1.4rem; cursor: pointer; transition: opacity 0.2s, transform 0.15s; white-space: nowrap; }
+  .btn-add:hover { opacity: 0.85; transform: translateY(-1px); }
+
+  /* Section */
+  .section-label { font-family: var(--display); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.9rem; margin-top: 2rem; display: flex; align-items: center; gap: 0.6rem; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .section-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+  /* Cards */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.85rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.1rem; display: flex; align-items: center; gap: 0.9rem; transition: border-color 0.2s, background 0.2s, transform 0.15s; position: relative; overflow: hidden; cursor: pointer; }
+  .card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--card-color, var(--accent)); opacity: 0; transition: opacity 0.2s; }
+  .card:hover { border-color: var(--card-color, var(--accent)); background: var(--surface2); transform: translateY(-2px); }
+  .card:hover::before { opacity: 1; }
+  .card-icon { font-size: 1.4rem; flex-shrink: 0; line-height: 1; }
+  .card-text { overflow: hidden; flex: 1; }
+  .card-name { font-weight: 600; font-size: 0.95rem; color: var(--card-name); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-url { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.15rem; }
+  .card-badge { font-family: var(--mono); font-size: 0.58rem; padding: 0.15rem 0.45rem; border-radius: 3px; background: rgba(128,128,128,0.12); color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+  .card-remove { flex-shrink: 0; background: none; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 3px; opacity: 0; transition: opacity 0.2s, color 0.2s, background 0.2s; }
+  .card:hover .card-remove { opacity: 1; }
+  .card-remove:hover { color: #ff4455; background: rgba(255,68,85,0.1); }
+
+  /* Spinner */
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface); border: 1px solid var(--accent2); color: var(--accent2); font-family: var(--mono); font-size: 0.78rem; padding: 0.65rem 1.1rem; border-radius: 5px; opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 999; }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.err { border-color: #ff4455; color: #ff4455; }
+
+  @media (max-width: 600px) { .card-grid { grid-template-columns: 1fr; } .add-form { flex-direction: column; } .field { min-width: 100%; } }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div>
+      <div class="logo">TEKII<span>.</span>NET</div>
+      <div class="tagline">// Belle Mont Sanctuary · Infrastructure Dashboard</div>
+    </div>
+    <div class="header-right">
+      <div class="header-top-row">
+        <button class="icon-btn" onclick="openSettings()" title="Settings">⚙️ <span>SETTINGS</span></button>
+        <button class="icon-btn" id="themeBtn" onclick="toggleTheme()">
+          <span id="themeIcon">☀️</span><span id="themeLabel">LIGHT</span>
+        </button>
+        <div class="clock" id="clock">00:00:00</div>
+      </div>
+      <div class="date-str" id="datestr"></div>
+    </div>
+  </header>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Checking JSONBin connection...</span>
+  </div>
+
+  <!-- Search -->
+  <div class="search-bar">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="searchInput" placeholder="filter links..." autocomplete="off" spellcheck="false">
+  </div>
+
+  <!-- Add panel -->
+  <div class="add-panel">
+    <button class="add-panel-toggle" id="addToggle" onclick="toggleAddPanel()">
+      <span class="plus">+</span><span>ADD NEW LINK</span>
+    </button>
+    <div class="add-form" id="addForm">
+      <div class="field">
+        <label>Name</label>
+        <input type="text" id="newName" placeholder="My Server" />
+      </div>
+      <div class="field">
+        <label>URL</label>
+        <input type="text" id="newUrl" placeholder="http://10.x.x.x/" />
+      </div>
+      <div class="field" style="max-width:200px">
+        <label>Category</label>
+        <select id="newCat">
+          <option value="Applications">Applications</option>
+          <option value="Monitoring">Monitoring</option>
+          <option value="Network">Network</option>
+          <option value="Storage">Storage</option>
+          <option value="Voice &amp; Comms">Voice &amp; Comms</option>
+          <option value="Tekii Droplet">Tekii Droplet</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field" style="max-width:130px">
+        <label>Badge / Note</label>
+        <input type="text" id="newNote" placeholder=":8443" />
+      </div>
+      <button class="btn-add" id="btnAdd" onclick="addLink()">ADD →</button>
+    </div>
+  </div>
+
+  <div id="linkSections"></div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>⚙️ SETTINGS</h2>
+    <p>Enter your JSONBin.io API key to enable persistent link storage across all devices.<br>Your key is saved only in this browser and never sent anywhere except JSONBin.</p>
+    <div class="modal-field">
+      <label>JSONBin Master Key or Access Key</label>
+      <input type="password" id="apiKeyInput" placeholder="$2a$10$..." autocomplete="off" />
+    </div>
+    <div class="modal-field">
+      <label>Bin ID <span style="opacity:0.5">(leave blank to auto-create)</span></label>
+      <input type="text" id="binIdInput" placeholder="auto" autocomplete="off" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveSettings()">SAVE & CONNECT</button>
+      <button class="btn-secondary" onclick="closeSettings()">CANCEL</button>
+      <button class="btn-danger" onclick="clearSettings()">CLEAR</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//  PRE-LOADED LINKS — always visible, on every device.
+//  Edit this array + push to GitHub to permanently add/remove these.
+// ═══════════════════════════════════════════════════════════════════════════
+const PRELOADED = [
+  { id:'p01', cat:'Applications',  icon:'📋', name:'IT Logbook',               url:'http://10.101.51.16/itlogs/',                  note:'khwebsrv'        },
+  { id:'p02', cat:'Applications',  icon:'📅', name:'Odoo Events',              url:'https://events.bellemontsanctuaryresort.com/', note:'khwebsrv'        },
+  { id:'p03', cat:'Applications',  icon:'✍️',  name:'Stories CMS',              url:'http://10.101.51.16/creator/',                 note:'khwebsrv'        },
+  { id:'p04', cat:'Applications',  icon:'💰', name:'Kash Finance',             url:'https://kash.tekii.org',                       note:'tekii.org'       },
+  { id:'p05', cat:'Applications',  icon:'🎓', name:'CFBC Odoo',                url:'https://cfbcaicoding.tekii.org',               note:'tekii.org'       },
+  { id:'p06', cat:'Monitoring',    icon:'🛡️',  name:'Security Onion (IDS)',     url:'https://10.101.51.8/',                         note:'khids'           },
+  { id:'p07', cat:'Monitoring',    icon:'📊', name:'Netdata – khwebsrv',       url:'http://10.101.51.16:19999/',                   note:':19999'          },
+  { id:'p08', cat:'Monitoring',    icon:'🔭', name:'Observium',                url:'http://10.101.51.21/',                         note:'10.101.51.21'    },
+  { id:'p09', cat:'Monitoring',    icon:'🟢', name:'Uptime Kuma',              url:'http://104.236.15.123:3001/',                  note:'tekii.org :3001' },
+  { id:'p10', cat:'Monitoring',    icon:'📈', name:'Grafana',                  url:'http://10.101.51.16:3000/',                    note:'khwebsrv :3000'  },
+  { id:'p11', cat:'Monitoring',    icon:'⚙️',  name:'Webmin – khwebsrv',        url:'https://10.101.51.16:10000/',                  note:':10000'          },
+  { id:'p12', cat:'Network',       icon:'🌐', name:'KH Router – Flow UI',      url:'http://205.214.204.196/',                      note:'CCR WAN IP'      },
+  { id:'p13', cat:'Network',       icon:'🌐', name:'KH Router – DDNS',         url:'http://58910466ad05.sn.mynetname.net',          note:'DDNS'            },
+  { id:'p14', cat:'Network',       icon:'🌐', name:"Arthur's Router – DDNS",   url:'http://hf3097z79pm.sn.mynetname.net',          note:'DDNS'            },
+  { id:'p22', cat:'Network',       icon:'📡', name:'UniFi Controller (LAN)',    url:'https://10.101.48.12:8443/',                   note:'10.101.48.12'    },
+  { id:'p23', cat:'Network',       icon:'📶', name:'Ruckus Controller',         url:'https://10.101.48.10/admin/login.jsp',         note:'10.101.48.10'    },
+  { id:'p15', cat:'Storage',       icon:'💾', name:'Primary QNAP',             url:'https://10.101.72.12/',                        note:'10.101.72.12'    },
+  { id:'p16', cat:'Storage',       icon:'💾', name:'Secondary QNAP',           url:'https://10.101.72.13/cgi-bin/',                note:'10.101.72.13'    },
+  { id:'p17', cat:'Voice & Comms', icon:'📞', name:'Cisco Call Manager',       url:'https://10.101.62.11/',                        note:'CUCM'            },
+  { id:'p18', cat:'Voice & Comms', icon:'📬', name:'Cisco Unity Connection',   url:'https://10.101.62.20/',                        note:'CUC'             },
+  { id:'p19', cat:'Tekii Droplet', icon:'📡', name:'UniFi Controller (Cloud)', url:'https://104.236.15.123:8443/',                 note:':8443'           },
+  { id:'p20', cat:'Tekii Droplet', icon:'📡', name:'Omada Controller',         url:'http://104.236.15.123:8088/',                  note:':8088'           },
+  { id:'p21', cat:'Tekii Droplet', icon:'📁', name:'FileBrowser',              url:'https://files.tekii.org',                      note:'files.tekii.org' },
+];
+
+const CAT_COLORS = {
+  'Applications':'#00c6ff','Monitoring':'#39ff6a','Network':'#ff6a00',
+  'Storage':'#b44fff','Voice & Comms':'#ffd600','Tekii Droplet':'#ff4faa','Other':'#6af0ff'
+};
+const CAT_COLORS_LIGHT = {
+  'Applications':'#0077aa','Monitoring':'#1a7a3a','Network':'#cc4400',
+  'Storage':'#7722cc','Voice & Comms':'#996600','Tekii Droplet':'#cc2277','Other':'#0066aa'
+};
+
+// ─── JSONBin config ──────────────────────────────────────────────────────────
+const JSONBIN_API = 'https://api.jsonbin.io/v3';
+let apiKey  = localStorage.getItem('tekii_apikey') || '';
+let binId   = localStorage.getItem('tekii_binid')  || '';
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let extraLinks  = [];   // loaded from JSONBin
+let hiddenIds   = [];   // preloaded IDs hidden by user (also in JSONBin)
+let searchQuery = '';
+let isLight     = localStorage.getItem('tekii_theme') === 'light';
+let isSyncing   = false;
+
+// ─── JSONBin helpers ─────────────────────────────────────────────────────────
+async function binGet() {
+  const r = await fetch(`${JSONBIN_API}/b/${binId}/latest`, {
+    headers: { 'X-Master-Key': apiKey }
+  });
+  if (!r.ok) throw new Error(`GET failed: ${r.status}`);
+  const j = await r.json();
+  return j.record;
+}
+
+async function binSet(data) {
+  const r = await fetch(`${JSONBIN_API}/b/${binId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) throw new Error(`PUT failed: ${r.status}`);
+}
+
+async function binCreate() {
+  const r = await fetch(`${JSONBIN_API}/b`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey, 'X-Bin-Name': 'tekii-dashboard' },
+    body: JSON.stringify({ extraLinks: [], hiddenIds: [] })
+  });
+  if (!r.ok) throw new Error(`CREATE failed: ${r.status}`);
+  const j = await r.json();
+  return j.metadata.id;
+}
+
+// ─── Load from JSONBin ───────────────────────────────────────────────────────
+async function loadFromBin() {
+  if (!apiKey) { setStatus('warn', 'No API key — add one in Settings to enable sync'); render(); return; }
+
+  setStatus('spin', 'Connecting to JSONBin...');
+  try {
+    if (!binId) {
+      setStatus('spin', 'Creating new bin...');
+      binId = await binCreate();
+      localStorage.setItem('tekii_binid', binId);
+      toast('New JSONBin created!');
+    }
+    const data = await binGet();
+    extraLinks = Array.isArray(data.extraLinks) ? data.extraLinks : [];
+    hiddenIds  = Array.isArray(data.hiddenIds)  ? data.hiddenIds  : [];
+    setStatus('ok', `Synced with JSONBin · ${extraLinks.length} custom link${extraLinks.length !== 1 ? 's' : ''}`);
+  } catch (e) {
+    setStatus('err', `JSONBin error: ${e.message}`);
+    toast(e.message, true);
+  }
+  render();
+}
+
+async function saveToBin() {
+  if (!apiKey || !binId) return;
+  isSyncing = true;
+  setStatus('spin', 'Saving...');
+  try {
+    await binSet({ extraLinks, hiddenIds });
+    setStatus('ok', `Synced · ${extraLinks.length} custom link${extraLinks.length !== 1 ? 's' : ''}`);
+  } catch (e) {
+    setStatus('err', `Save failed: ${e.message}`);
+    toast(e.message, true);
+  }
+  isSyncing = false;
+}
+
+// ─── Status bar ──────────────────────────────────────────────────────────────
+function setStatus(type, msg) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'status-dot' + (type === 'ok' ? ' ok' : type === 'err' ? ' err' : type === 'warn' ? ' warn' : '');
+  txt.innerHTML = type === 'spin'
+    ? `<span class="spinner"></span> ${esc(msg)}`
+    : esc(msg);
+}
+
+// ─── Settings modal ──────────────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('apiKeyInput').value = apiKey;
+  document.getElementById('binIdInput').value  = binId;
+  document.getElementById('settingsModal').classList.add('show');
+}
+function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
+async function saveSettings() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  const b = document.getElementById('binIdInput').value.trim();
+  if (!k) { toast('Please enter an API key', true); return; }
+  apiKey = k; binId = b;
+  localStorage.setItem('tekii_apikey', apiKey);
+  localStorage.setItem('tekii_binid',  binId);
+  closeSettings();
+  await loadFromBin();
+}
+function clearSettings() {
+  if (!confirm('Clear API key and bin ID from this browser?')) return;
+  apiKey = ''; binId = '';
+  localStorage.removeItem('tekii_apikey');
+  localStorage.removeItem('tekii_binid');
+  closeSettings();
+  setStatus('warn', 'No API key — add one in Settings to enable sync');
+  toast('Settings cleared');
+}
+
+// ─── Add link ────────────────────────────────────────────────────────────────
+async function addLink() {
+  const name = document.getElementById('newName').value.trim();
+  const url  = document.getElementById('newUrl').value.trim();
+  const cat  = document.getElementById('newCat').value;
+  const note = document.getElementById('newNote').value.trim();
+  if (!name || !url) { toast('Please enter a name and URL.', true); return; }
+  const fullUrl = /^https?:\/\//i.test(url) ? url : 'http://' + url;
+  const newLink = { id: 'u_' + Date.now(), name, url: fullUrl, cat, note, icon: '🔗' };
+  extraLinks.push(newLink);
+  render();
+  document.getElementById('newName').value = '';
+  document.getElementById('newUrl').value  = '';
+  document.getElementById('newNote').value = '';
+  toast(`"${name}" added`);
+  await saveToBin();
+}
+
+// ─── Remove link ─────────────────────────────────────────────────────────────
+async function removeLink(e, id) {
+  e.stopPropagation();
+  const isPreloaded = PRELOADED.some(p => p.id === id);
+  const link = isPreloaded ? PRELOADED.find(p => p.id === id) : extraLinks.find(l => l.id === id);
+  if (!link) return;
+  if (!confirm(`Remove "${link.name}"?`)) return;
+
+  if (isPreloaded) {
+    hiddenIds.push(id);
+  } else {
+    extraLinks = extraLinks.filter(l => l.id !== id);
+  }
+  render();
+  toast(`"${link.name}" removed`);
+  await saveToBin();
+}
+
+// ─── Render ──────────────────────────────────────────────────────────────────
+function render() {
+  const colors = isLight ? CAT_COLORS_LIGHT : CAT_COLORS;
+  const visible = [...PRELOADED.filter(p => !hiddenIds.includes(p.id)), ...extraLinks];
+  const q = searchQuery;
+  const filtered = q ? visible.filter(l =>
+    l.name.toLowerCase().includes(q) || l.url.toLowerCase().includes(q) ||
+    l.cat.toLowerCase().includes(q)  || (l.note||'').toLowerCase().includes(q)
+  ) : visible;
+
+  const catOrder = [...new Set(visible.map(l => l.cat))];
+  const container = document.getElementById('linkSections');
+  container.innerHTML = '';
+
+  catOrder.forEach(cat => {
+    const items = filtered.filter(l => l.cat === cat);
+    if (!items.length) return;
+    const color = colors[cat] || '#6af0ff';
+    const section = document.createElement('div');
+
+    const label = document.createElement('div');
+    label.className = 'section-label';
+    label.innerHTML = `<span class="section-dot" style="background:${color}"></span>${esc(cat)}`;
+    section.appendChild(label);
+
+    const grid = document.createElement('div');
+    grid.className = 'card-grid';
+
+    items.forEach(link => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.setProperty('--card-color', color);
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.title = link.url;
+      card.innerHTML = `
+        <div class="card-icon">${link.icon||'🔗'}</div>
+        <div class="card-text">
+          <div class="card-name">${esc(link.name)}</div>
+          <div class="card-url">${esc(link.url)}</div>
+        </div>
+        ${link.note ? `<div class="card-badge">${esc(link.note)}</div>` : ''}
+        <button class="card-remove" onclick="removeLink(event,'${link.id}')" title="Remove">✕</button>
+      `;
+      card.addEventListener('click', e => { if (!e.target.classList.contains('card-remove')) window.open(link.url, '_blank', 'noopener'); });
+      card.addEventListener('keydown', e => { if (e.key === 'Enter') window.open(link.url, '_blank', 'noopener'); });
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── UI helpers ──────────────────────────────────────────────────────────────
+function toggleAddPanel() {
+  document.getElementById('addToggle').classList.toggle('open');
+  const form = document.getElementById('addForm');
+  form.classList.toggle('visible');
+  if (form.classList.contains('visible')) document.getElementById('newName').focus();
+}
+
+function toggleTheme() {
+  isLight = !isLight;
+  localStorage.setItem('tekii_theme', isLight ? 'light' : 'dark');
+  document.body.classList.toggle('light', isLight);
+  document.getElementById('themeIcon').textContent  = isLight ? '🌙' : '☀️';
+  document.getElementById('themeLabel').textContent = isLight ? 'DARK' : 'LIGHT';
+  render();
+}
+
+// Close modal on overlay click
+document.getElementById('settingsModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeSettings(); });
+
+// Enter key in add form
+document.addEventListener('DOMContentLoaded', () => {
+  ['newName','newUrl','newNote'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') addLink(); });
+  });
+  document.getElementById('apiKeyInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveSettings(); });
+});
+
+document.getElementById('searchInput').addEventListener('input', function() {
+  searchQuery = this.value.toLowerCase().trim();
+  render();
+});
+
+// ─── Clock ───────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date(), p = n => String(n).padStart(2,'0');
+  document.getElementById('clock').textContent = `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+  const days=['SUN','MON','TUE','WED','THU','FRI','SAT'], months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  document.getElementById('datestr').textContent = `${days[now.getDay()]} ${p(now.getDate())} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, isErr=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = isErr ? 'err' : '';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ─── Apply theme & init ──────────────────────────────────────────────────────
+document.body.classList.toggle('light', isLight);
+document.getElementById('themeIcon').textContent  = isLight ? '🌙' : '☀️';
+document.getElementById('themeLabel').textContent = isLight ? 'DARK' : 'LIGHT';
+
+loadFromBin();
+</script>
+</body>
+</html>
